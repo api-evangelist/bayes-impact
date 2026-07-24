@@ -1,0 +1,23 @@
+# Bayes Impact
+
+> Bayes Impact is a nonprofit organization that builds open-source AI and data-science tools for public services, governments, and nonprofits. Its flagship project, Bob (formerly Bob Emploi), provides personalized, data-driven career and job-search advice to jobseekers via a Python/Flask RESTful JSON API whose data structures are defined in Protocol Buffers.
+
+## Organization
+- [Bayes Impact website](https://www.bayesimpact.org): Mission, programs, and impact
+- [Programs](https://www.bayesimpact.org/programs/): Bayes Platform, Impulse.Healthcare, CaseAI, and public-service deployments
+- [GitHub organization](https://github.com/bayesimpact): All open-source repositories
+- [Data science blog](https://bayesimpact.github.io/): Bayes Impact engineering and data-science writing
+
+## Flagship project — Bob (Bob Emploi)
+- [bob-emploi repository](https://github.com/bayesimpact/bob-emploi): Open-source jobseeker-advice application (React SPA + Python/Flask RESTful JSON API)
+- [Protobuf API data model](https://github.com/bayesimpact/bob-emploi/tree/main/frontend/api): proto3 message definitions modeling the API's data structures
+
+## Data model (captured artifacts)
+- [Protobuf index](grpc/_index.yml): Verbatim core proto3 definitions (job, project, user, diagnostic, action, auth, advisor, strategy, geo, features)
+
+## Legal
+- [Privacy policy](https://www.bayesimpact.org/privacy-policy/)
+- [Legal notices](https://www.bayesimpact.org/legal-notices/)
+
+## Contact
+- hello@bayesimpact.org

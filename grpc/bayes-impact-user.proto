@@ -1,0 +1,532 @@
+syntax = "proto3";
+
+import "google/protobuf/field_mask.proto";
+import "google/protobuf/timestamp.proto";
+
+import "bob_emploi/frontend/api/boolean.proto";
+import "bob_emploi/frontend/api/diagnostic.proto";
+import "bob_emploi/frontend/api/email.proto";
+import "bob_emploi/frontend/api/features.proto";
+import "bob_emploi/frontend/api/job.proto";
+import "bob_emploi/frontend/api/options.proto";
+import "bob_emploi/frontend/api/project.proto";
+import "bob_emploi/frontend/api/user_profile.proto";
+
+package bayes.bob;
+option go_package="bayes.org/bob_emploi/frontend/api/user";
+
+// All data for a user of the mashup app, a job seeker.
+// Next ID: 33
+message User {
+  // A unique identifier for this user. It is not related to any public
+  // identifiers although it is not obfuscated in the API. It looks like a normal Mongo ObjectID,
+  // under the hood however we hash it with a salt to make it less guessable.
+  //
+  // In MongoDB, this is stored as the key ("_id") and therefore you should not
+  // rely on this field being populated. However during transport or on the
+  // client, this field should be populated as soon as we have an ID.
+  string user_id = 1 [(field_usage) = PERSONAL_IDENTIFIER];
+
+  // Profile of the user.
+  UserProfile profile = 2;
+
+  // ID of the google account linked to this profile.
+  string google_id = 7 [(field_usage) = PERSONAL_IDENTIFIER];
+
+  // ID of the Facebook account linked to this profile.
+  string facebook_id = 8 [(field_usage) = PERSONAL_IDENTIFIER];
+
+  // ID of the PE Connect account linked to this profile.
+  string pe_connect_id = 24 [(field_usage) = PERSONAL_IDENTIFIER];
+
+  // ID of the LinkedIn account linked to this profile.
+  string linked_in_id = 25 [(field_usage) = PERSONAL_IDENTIFIER];
+
+  // Hash of the person's email, for login/password connect: sha1('bob-emploi' + email). Also makes
+  // sure the email is not used by another mean of authentication yet.
+  string hashed_email = 14 [(field_usage) = PERSONAL_IDENTIFIER];
+
+  // The date and time at which the user has registered with the app.
+  google.protobuf.Timestamp registered_at = 6 [(field_usage) = APP_ONLY];
+
+  // List of current projects for this user even the ones on stand-by.
+  repeated Project projects = 3;
+
+  // List of old projects (older first).
+  repeated Project deleted_projects = 12;
+
+  // App is not available to the user. A possible reason might be the user being in an
+  // unverified data zone.
+  bool app_not_available = 4 [(field_usage) = APP_ONLY];
+
+  // Features enabled for this user.
+  Features features_enabled = 9 [(field_usage) = APP_ONLY];
+
+  // The last date on which the user loaded their information through the API.
+  // We only look at the date of this value, not at the time.
+  google.protobuf.Timestamp requested_by_user_at_date = 10 [(field_usage) = APP_ONLY];
+
+  // The date on which it is OK to check if the user can be deleted.
+  google.protobuf.Timestamp check_for_deletion_date = 32 [(field_usage) = APP_ONLY];
+
+  // The date and time we last sent an email to the user. This does not include
+  // password recovery emails.
+  google.protobuf.Timestamp last_email_sent_at = 11 [(field_usage) = APP_ONLY];
+
+  // Value of the utm parameters the first time the user reached our website.
+  TrackingParameters origin = 23;
+
+  // Response from the user to the survey we send by email to get feedback on the app
+  // and on the relevance of the given advices.
+  NPSSurveyResponse net_promoter_score_survey_response = 15 [(field_usage) = USER_FEEDBACK];
+
+  // Response from the user to the first followup survey sent by email to get feedback.
+  FirstFollowupSurveyResponse first_followup_survey_response = 33 [(field_usage) = USER_FEEDBACK];
+
+  // Revision of the user's data. This number should always be increasing, it
+  // helps keep synchronized the client and the server versions of the user's
+  // data. See http://go/bob:revision-design
+  int32 revision = 18 [(field_usage) = APP_ONLY];
+
+  // The emails that were sent to the user.
+  repeated EmailSent emails_sent = 19 [(field_usage) = APP_ONLY];
+
+  // The employment survey responses.
+  repeated EmploymentStatus employment_status = 20 [(field_usage) = USER_FEEDBACK];
+
+  // The date and time at which the user has deleted their account.
+  google.protobuf.Timestamp deleted_at = 21 [(field_usage) = APP_ONLY];
+
+  // Metrics reported from the client.
+  ClientSideMetrics client_metrics = 22;
+
+  // More info if the user is a grantee of MayDay operation.
+  MaydayGrantee mayday = 26 [(field_usage) = APP_ONLY];
+
+  // Next date after which we can try again sending a coaching email.
+  google.protobuf.Timestamp send_coaching_email_after = 27 [(field_usage) = ALGORITHM_RESULT];
+
+  // Whether the user has (or had) an account linked using an email/password or an SSO connection.
+  // Before July 2019, all users had account.
+  bool has_account = 28 [(field_usage) = APP_ONLY];
+
+  // Whether the user has a custom password that allow them to login. The password itself is hashed
+  // and stored in another proto.
+  bool has_password = 29 [(field_usage) = APP_ONLY];
+
+  // A list of opened tickets on support help desk, ordered by creation date.
+  // Unused tickets should be deleted after some time.
+  // TODO(cyrille): Add a cleaner CRON.
+  repeated SupportTicket support_tickets = 30;
+
+  // Information about the link between the product and Ma Voie.
+  MaVoieInfo ma_voie = 31;
+}
+
+message MaVoieInfo {
+  // The ID for this specific user in Ma Voie.
+  string ma_voie_id = 1 [(field_usage) = PERSONAL_IDENTIFIER];
+
+  // The step in Ma Voie this user is expected to fulfill with the product.
+  string step_id = 2;
+}
+
+message SupportTicket {
+  // A unique identifier for this ticket.
+  string ticket_id = 1 [(field_usage) = PERSONAL_IDENTIFIER];
+
+  // An expiration date for this ticket.
+  google.protobuf.Timestamp delete_after = 2 [(field_usage) = APP_ONLY];
+}
+
+
+message TrackingParameters {
+  // A slug identifying the org, product or website that reffered the user to
+  // Bob, e.g. "pole-emploi", "adie" or "bob-emploi" when it's auto-referral.
+  // Originally in utm_source.
+  string source = 1 [(field_usage) = APP_ONLY];
+
+  // An ID identifying the medium that was originally used to reffer the user
+  // to Bob, e.g. "link", "email". Originally in utm_medium.
+  string medium = 2 [(field_usage) = APP_ONLY];
+
+  // The ID of the campaign if any. See https://airtable.com/tblpbiUqtvn3poeXd
+  // for a full list of short codes. Originally in utm_campaign.
+  string campaign = 3 [(field_usage) = APP_ONLY];
+
+  // Value of the utm_content parameters the first time the user reached our
+  // website. If it is not empty, it contains an ID that helps us track the
+  // system that recommended the app to the user originally.
+  string content = 4 [(field_usage) = PERSONAL_IDENTIFIER];
+}
+
+// A lightweight message to reference a user.
+message UserId {
+  // A unique identifier for this user. It is not related to any public
+  // identifiers although it is not obfuscated in the API.
+  string user_id = 1;
+}
+
+// A user, together with information on whether it should be completed by the client and how.
+// Completion would allow a more relevant algorithm result.
+message UpdatableUser {
+  User user = 1;
+
+  // Whether the missing data is necessary for a relevant assessment, or simply optimization.
+  bool is_completion_required = 2;
+
+  // A list of fields that need completion for a better assessment of the user,
+  // sorted by descending priority.
+  repeated MissingField missing_fields = 3;
+}
+
+message MissingField {
+  // The fields follow the FieldMask JSON format for a user,
+  // except that repeated fields are allowed, with the index specified, eg: `projects.0.hasResume`.
+  string field = 1;
+
+  // How much this field needs to be filled, the higher the value the more it's important.
+  // Values are only relevant related to each other in a given list.
+  // E.g. in a given list, a field required to find a main blocker would be prioritized at 2,
+  // a field required to establish a secondary blocker would be prioritized as 1,
+  // and a field required to check whether a method is relevant would be prioritized as 0.
+  uint32 priority = 2;
+}
+
+// A message containing fields according to which we can decide whether the app is available or not.
+// To access these messages from the Mongo DB, the key is the MD5 digest of a combination of
+// the postcodes with the ROME ID, connected by a colon (e.g. md5('1590:C1109')).
+// We don't use the fields of the message, but keep them around for readability as the ID is so cryptic.
+message UnverifiedDataZone {
+
+  // A string of dash separated postcodes, as we also have them in the
+  // Algolia `cities` index. As an example for Toulouse: `31000-31100-31200-31300-31400-31500`.
+  string postcodes = 1;
+
+  // ROME ID of the job group.
+  string rome_id = 2;
+}
+
+message Notifications {
+  // A notification for PE counselors that shows a kit to prepare info collectives.
+  bool info_coll_kit = 1;
+}
+
+// Responses to the survey sent by email to user to compute the Net Promoter Score,
+// get feedback on the advices (https://bayes.typeform.com/to/uuPH5r?email=me@example.com)
+// and make sure the user understood Bob's value proposition.
+// Next ID: 15.
+message NPSSurveyResponse {
+  // The email address used to answer the survey.
+  string email = 1;
+
+  // The date and time at which the user has responded to the survey.
+  google.protobuf.Timestamp responded_at = 2;
+
+  // How much (from 0 to 10) the user would recommend the app.
+  // As the score is always supposed to be given, not finding a value for 'score' means
+  // the given score was '0'.
+  uint32 score = 3;
+
+  // Free-form text answer to the question "What did you think about the advices?".
+  string were_advices_useful_comment = 4;
+
+  // Free-form text answer to the question "Which advices have you found useful?".
+  string which_advices_were_useful_comment = 5;
+
+  // Free-form text answer about what the user liked or did not like in the app.
+  string general_feedback_comment = 6;
+
+  // List of advices that we consider have created a spark for the user.
+  // This is manually edited by team members after looking at the user answer
+  // 'which_advices_were_useful_comment' and at the list of advices the app actually
+  // gave to the user.
+  repeated string curated_useful_advice_ids = 7;
+
+  // User self-dagnostic right after using Bob.
+  SelfDiagnostic nps_self_diagnostic = 8;
+
+  // Whether the user has ideas to act on its own self-diagnostic. The exact action is part of the
+  // general feedback comment.
+  OptionalBool has_actions_idea = 9;
+
+  // What the user thinks about local market.
+  LocalMarketUserEstimate local_market_estimate = 10;
+
+  // Relative personalization of Bob compared to the other coaches, the
+  // baseline being 10. 10 means "as personalized as the other coaches", 12
+  // means Bob was more personalized, 15 Bob was way more personalized, 8 Bob
+  // was less personalized, 5 Bob was way less personalized.
+  uint32 bob_relative_personalization = 11;
+
+  // How much the user is better informed about different career options after using Bob.
+  // 1 means no change, 2 more informed, 3 way more.
+  uint32 user_informed_about_career_options = 12;
+
+  // Ease of use of Bob.
+  // 0 is unknown, 1 is "very difficult to use", 5 is "very easy to use".
+  uint32 product_usability_score = 13;
+
+  // What actions the user plans to do next.
+  // List of actionIds (example: "explore-jobs"), the order doesn't matter.
+  repeated string next_actions = 14;
+}
+
+message FirstFollowupSurveyResponse {
+  // The date and time at which the user has responded to the survey.
+  google.protobuf.Timestamp responded_at = 1;
+
+  // Whether the user has tried something new in their job search after using Bob.
+  bool has_tried_something_new = 2;
+
+  // How much the user learnt to meet their challenge (if any). 1 to 5 (0 means unknown).
+  int32 learn_to_meet_challenge_score = 3;
+
+  // How much the user got new ideas about what to do for their job search. 1 to 5 (0 means unknown).
+  int32 new_ideas_score = 4;
+
+  // How useful where the resources given. 1 to 5 (0 means unknown).
+  int32 useful_resource_score = 5;
+
+  // How much the user was helped to plan what to do. 1 to 5 (0 means unknown).
+  int32 helps_plan_score = 6;
+
+  // How much the user felt the content was personalized to them. 1 to 5 (0 means unknown).
+  int32 personalized_advice_score = 7;
+
+  // How much the user already knew what was needed (before Bob). 1 to 5 (0 means unknown).
+  // 5 means they already knew everything Bob told them.
+  int32 knew_own_need_score = 8;
+
+  // How useful the user found the action plan scheduling. 1 to 5 (0 means unknown).
+  int32 useful_schedule_score = 9;
+
+  string comment = 10;
+
+  // How much Bob helped improve the user's self-confidence. 1 to 5 (0 means unknown).
+  int32 improve_self_confidence_score = 11;
+}
+
+enum LocalMarketUserEstimate {
+  // User did not answer.
+  UNKNOWN_LOCAL_MARKET_ESTIMATE = 0;
+
+  LOCAL_MARKET_GOOD = 1;
+  LOCAL_MARKET_BAD = 2;
+  LOCAL_MARKET_UNKNOWN = 3;
+  LOCAL_MARKET_UNKNOWN_COVID = 4;
+}
+
+message SetNPSCommentRequest {
+  // A unique identifier for this user. It is not related to any public
+  // identifiers although it is not obfuscated in the API.
+  string user_id = 1 [(field_usage) = PERSONAL_IDENTIFIER];
+
+  // Free-form text answer about what the user liked or did not like in the app.
+  string comment = 2;
+
+  // User self-dagnostic at the time of nps.
+  SelfDiagnostic self_diagnostic = 3;
+
+  // Whether the user has ideas to act on its own self-diagnostic.
+  OptionalBool has_actions_idea = 4;
+
+  // A response to merge with what was already found.
+  NPSSurveyResponse answers = 5;
+
+  // What actions the user plans to do next.
+  // List of actionIds (example: "explore-jobs"), the order doesn't matter.
+  repeated string next_actions = 6;
+}
+
+message SetFFSCommentRequest {
+  // Free-form text answer about what the user liked or did not like in the app.
+  string comment = 1;
+
+  // Whether the user has tried something new in their job search after using Bob.
+  OptionalBool has_tried_something_new = 2;
+
+  // How much the user learnt to meet their challenge (if any). 1 to 5 (0 means unknown).
+  int32 learn_to_meet_challenge_score = 3;
+
+  // How much the user got new ideas about what to do for their job search. 1 to 5 (0 means unknown).
+  int32 new_ideas_score = 4;
+
+  // How useful where the resources given. 1 to 5 (0 means unknown).
+  int32 useful_resource_score = 5;
+
+  // How much the user was helped to plan what to do. 1 to 5 (0 means unknown).
+  int32 helps_plan_score = 6;
+
+  // How much the user felt the content was personalized to them. 1 to 5 (0 means unknown).
+  int32 personalized_advice_score = 7;
+
+  // How much the user already knew what was needed (before Bob). 1 to 5 (0 means unknown).
+  // 5 means they already knew everything Bob told them.
+  int32 knew_own_need_score = 8;
+
+  // How useful the user found the action plan scheduling. 1 to 5 (0 means unknown).
+  int32 useful_schedule_score = 9;
+
+  // How much Bob helped improve the user's self-confidence. 1 to 5 (0 means unknown).
+  int32 improve_self_confidence_score = 10;
+}
+
+// Description of an employement survey response.
+message EmploymentStatus {
+  // Creation timestamp.
+  google.protobuf.Timestamp created_at = 1;
+
+  // Whether the user is still searching for a job.
+  SeekingStatus seeking = 2;
+
+  // User situation.
+  string situation = 3;
+
+  // Whether bob has helped.
+  string bob_has_helped = 4;
+
+  // Whether the user is in a new job (or kept the previous one).
+  OptionalBool is_new_job = 9;
+
+  // Contract type of the new job, if any.
+  EmploymentType new_job_contract_type = 5;
+
+  // Whether the user's new job is in a different sector than its previous one.
+  OptionalBool is_job_in_different_sector = 10;
+
+  // Whether the user's salary has increased.
+  OptionalBool has_salary_increased = 11;
+
+  // Whether the user's has taken on new responsibilities.
+  OptionalBool has_greater_role = 12;
+
+  // Whether the user's has been promoted.
+  OptionalBool has_been_promoted = 13;
+
+  // List of Bob features that were useful.
+  repeated UsefulFeature bob_features_that_helped = 6;
+
+  // A set of other coaches that they used during their job search.
+  // This field was active from mid oct 2018 to mid jan 2019 and is not used anymore.
+  repeated OtherCoach other_coaches_used = 7;
+
+  // Relative personalization of Bob compared to the other coaches, the
+  // baseline being 10. 10 means "as personalized as the other coaches", 12
+  // means Bob was more personalized, 15 Bob was way more personalized, 8 Bob
+  // was less personalized, 5 Bob was way less personalized.
+  // This field was active from mid oct 2018 to mid jan 2019 and is not used anymore.
+  int32 bob_relative_personalization = 8;
+
+  // How much Bob helped improve the user's self-confidence. 1 to 5 (0 means unknown).
+  int32 improve_self_confidence_score = 14;
+
+  // How much the user got new ideas about what to do for their job search. 1 to 5 (0 means unknown).
+  int32 new_ideas_score = 15;
+
+  // How useful where the resources given. 1 to 5 (0 means unknown).
+  int32 useful_resource_score = 16;
+
+  // How much the user was helped to plan what to do. 1 to 5 (0 means unknown).
+  int32 helps_plan_score = 17;
+
+  // How much the user felt the content was personalized to them. 1 to 5 (0 means unknown).
+  int32 personalized_advice_score = 18;
+
+  // How much the user felt the coaching emails brought new content for their job search.
+  // 1 to 5 (0 means unknown).
+  int32 new_from_coaching_emails_score = 19;
+
+  // User feels more motivated to continue their job search after using the product.
+  // 1 to 5 (0 means unknown).
+  int32 motivation_score = 20;
+
+  // Free form feedback.
+  string feedback = 21;
+}
+
+// Job seeker status.
+enum SeekingStatus {
+  SEEKING_STATUS_UNDEFINED = 0;
+  STILL_SEEKING = 1;
+  STOP_SEEKING = 2;
+}
+
+enum UsefulFeature {
+  UNKNOWN_FEATURE = 0;
+
+  // Bob diagnostic or Bob score.
+  DIAGNOSTIC = 1;
+
+  // Bob pushed the user to use or expand their network.
+  NETWORK = 2;
+
+  // Bob pushed the user to send more spontaneous applications.
+  SPONTANEOUS = 3;
+
+  // Tips for the resumes and the cover letters.
+  RESUME_TIPS = 4;
+
+  // Tips for the interviews.
+  INTERVIEW_TIPS = 5;
+
+  // Bob pushed the user to change their job search strategie.
+  STRATEGY_CHANGE = 6;
+}
+
+enum OtherCoach {
+  UNKNOWN_OTHER_COACH = 0;
+
+  // A meeting with a PE counselor or equivalent (Mission Locale, APEC).
+  PE_COUNSELOR_MEETING = 1;
+
+  // A one-time meeting with a private coach.
+  PRIVATE_COACH_MEETING = 2;
+
+  // A coaching program with a private coach.
+  PRIVATE_COACH_PROGRAM = 3;
+
+  // Mutual-aid sessions throug an NGO.
+  MUTUAL_AID_ORGANIZATION = 4;
+}
+
+message ClientSideMetrics {
+  // ID of user on Amplitude if any.
+  string amplitude_id = 1 [(field_usage) = PERSONAL_IDENTIFIER];
+
+  // Duration of the user's first session.
+  uint32 first_session_duration_seconds = 2 [(field_usage) = APP_ONLY];
+
+  // Whether the first session is mobile.
+  OptionalBool is_first_session_mobile = 3 [(field_usage) = APP_ONLY];
+}
+
+message MaydayGrantee {
+  // Whether the user is OK to have a coffee with a helper.
+  OptionalBool has_accepted_coffee = 1;
+
+  // ID of the helper that was match to have a coffee with this user.
+  string coffee_helper_id = 2;
+}
+
+message UserWithAdviceSelection {
+  User user = 1;
+
+  // Sorted list of selected advice module IDs.
+  repeated string advice_ids = 2;
+}
+
+message QuickDiagnosticRequest {
+  // The user and its project (as first project) to diagnose.
+  User user = 1;
+
+  // The field of the profile or project that was entered latest and on which
+  // the client is requesting a diagnostic. If not specified then try to give
+  // all the mini diagnostics possible.
+  ProjectOrProfileField field = 2;
+
+  // Fields that are sent. If they are not set, it means the default value should apply and replace
+  // the previous one.
+  // If it is empty, do not use it.
+  google.protobuf.FieldMask field_mask = 3;
+}

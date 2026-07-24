@@ -1,0 +1,33 @@
+generated: '2026-07-18'
+method: searched
+source: https://github.com/bayesimpact/bob-emploi/tree/main/frontend/api
+description: >-
+  Protocol Buffer (proto3) message definitions that model the Bob (Bob Emploi)
+  RESTful JSON API. These are the language-neutral data structures Bayes Impact
+  publishes for its open-source jobseeker-advice platform; the API server is a
+  Python/Flask app that serializes these messages to JSON. Message-only protos
+  (no gRPC service definitions). A representative core subset is captured
+  verbatim here; the full set (47 files) lives in the upstream repository.
+repo: https://github.com/bayesimpact/bob-emploi
+proto_path: frontend/api
+protos:
+- file: bayes-impact-job.proto
+  source: frontend/api/job.proto
+- file: bayes-impact-project.proto
+  source: frontend/api/project.proto
+- file: bayes-impact-user.proto
+  source: frontend/api/user.proto
+- file: bayes-impact-diagnostic.proto
+  source: frontend/api/diagnostic.proto
+- file: bayes-impact-action.proto
+  source: frontend/api/action.proto
+- file: bayes-impact-auth.proto
+  source: frontend/api/auth.proto
+- file: bayes-impact-advisor.proto
+  source: frontend/api/advisor.proto
+- file: bayes-impact-strategy.proto
+  source: frontend/api/strategy.proto
+- file: bayes-impact-geo.proto
+  source: frontend/api/geo.proto
+- file: bayes-impact-features.proto
+  source: frontend/api/features.proto

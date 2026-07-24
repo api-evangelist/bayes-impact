@@ -1,7 +1,26 @@
 aid: bayes-impact
 name: Bayes Impact
-description: Bayes Impact is a company surfaced as a portfolio company of y-combinator and added to the
-  API Evangelist network as a stub for enrichment. This profile is a lead awaiting the enrichment pipeline.
+description: Bayes Impact is a nonprofit organization that builds open-source AI and
+  data-science tools for public services, governments, and nonprofits, with a mission
+  to empower people in need and those who help them. Surfaced through Y Combinator,
+  it has served over 10 million beneficiaries across three continents. Its flagship
+  open-source project, Bob (formerly Bob Emploi), delivers personalized, data-driven
+  career and job-search advice to jobseekers through a Python/Flask RESTful JSON API
+  whose data structures are defined in Protocol Buffers. Other projects include the
+  Bayes Platform agent framework for public services, the Encompass geographic-access
+  analysis tool, and a range of civic data-science tooling.
+accessModel:
+  pricing: unknown
+  onboarding: unknown
+  trial: false
+  try_now: false
+  public: false
+  label: Unknown
+  confidence: low
+  source: []
+  generated: '2026-07-22'
+  method: derived
+image: https://avatars.githubusercontent.com/u/7692453?v=4
 url: https://raw.githubusercontent.com/api-evangelist/bayes-impact/refs/heads/main/apis.yml
 x-type: company
 x-source: vc-portfolio
@@ -11,12 +30,47 @@ x-tier: stub
 x-tier-reason: portfolio-lead
 specificationVersion: '0.20'
 created: '2026-07-17'
-modified: '2026-07-17'
+modified: '2026-07-18'
 tags:
 - Company
+- Nonprofit
+- Artificial Intelligence
+- Data Science
+- Public Services
+- Civic Tech
+- Employment
+- Open Source
+- Protobuf
 apis: []
+common:
+- type: Website
+  url: https://www.bayesimpact.org
+- type: GitHubOrganization
+  url: https://github.com/bayesimpact
+- type: SourceCode
+  url: https://github.com/bayesimpact/bob-emploi
+- type: Blog
+  url: https://bayesimpact.github.io/
+- type: PrivacyPolicy
+  url: https://www.bayesimpact.org/privacy-policy/
+- type: TermsOfService
+  url: https://www.bayesimpact.org/legal-notices/
+- type: Support
+  url: mailto:hello@bayesimpact.org
+- type: Protobuf
+  name: Bob Emploi Protobuf data model
+  url: grpc/_index.yml
+- type: DomainSecurity
+  url: security/bayes-impact-domain-security.yml
+- type: LLMsTxt
+  url: llms/bayes-impact-llms.txt
 maintainers:
 - FN: Kin Lane
   email: kin@apievangelist.com
 - FN: APIs.json
   email: info@apis.io
+x-enrichment:
+  date: '2026-07-19'
+  status: backfilled
+  pass: local-v1
+  note: backfilled from .gitignore signal + verified work evidence

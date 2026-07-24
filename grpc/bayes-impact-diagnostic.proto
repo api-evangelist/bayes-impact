@@ -1,0 +1,390 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+import "bob_emploi/frontend/api/boolean.proto";
+import "bob_emploi/frontend/api/options.proto";
+
+package bayes.bob;
+option go_package="bayes.org/bob_emploi/frontend/api/diagnostic";
+
+message Diagnostic {
+  // Overall score for a project, typically from 0 (worst) to 100 (best).
+  uint32 overall_score = 1;
+
+  // Diagnostics on separated parts of the project.
+  // TODO(pascal): Clean up but make sure to keep interesting values in the Stats Page.
+  repeated SubDiagnostic sub_diagnostics = 2 [deprecated = true];
+
+  // A textual personalized diagnostic. This uses markup language.
+  string text = 3 [(string_format) = MARKUP_LANGUAGE];
+
+  // Overall sentence for a project, to give the main point of this diagnostic.
+  // For instance: "Projet pas assez clair"
+  // This is in the user's locale and uses markup language.
+  string overall_sentence = 4 [(string_format) = MARKUP_LANGUAGE];
+
+  // The category in which we consider the user to be.
+  string category_id = 5;
+
+  // The text introducing the strategies proposed for this diagnostic.
+  // DEPRECATED (since 2019-03): Use strategies_introduction from DiagnosticTemplate instead.
+  string strategies_introduction = 6 [deprecated = true, (string_format) = NATURAL_LANGUAGE];
+
+  // Short text emphasing the priority for bob computed main challenge.
+  // This is an advice sent to the user ("you" / "vous" / "tu" form) by Bob (using the "I" / "je" form)
+  // For instance: "viser un métier précis augmente très fortement vos chances de trouver un emploi"
+  // This is in the user's locale.
+  string bob_explanation = 7 [(string_format) = NATURAL_LANGUAGE];
+
+  // Response text computed from bob diagnostic and self diagnostic
+  // For instance: "J'observe une très forte concurrence pour ce métier : une belle candidature
+  // ne fera pas forcément la différence ! Regardons."
+  // This is in the user's locale.
+  string response = 8 [(string_format) = NATURAL_LANGUAGE];
+
+  // A list of main challenges used in the diagnostic with their relevance for the project. The most
+  // important (the one that was evaluated first) first. Only one of these can be highlighted.
+  repeated DiagnosticMainChallenge categories = 11;
+}
+
+// TODO(pascal): Clean up.
+message SubDiagnostic {
+  // The topic of this sub diagnostic.
+  DiagnosticTopic topic = 1;
+
+  // Score for the project for this sub-metric, typically from 0 (worst) to 100
+  // (best).
+  uint32 score = 2;
+
+  // A textual personalized diagnostic for this submetric. This uses markup
+  // language.
+  string text = 3 [(string_format) = MARKUP_LANGUAGE];
+
+  // Different observations on the user related to the given topic.
+  repeated SubDiagnosticObservation observations = 4;
+}
+
+// TODO(pascal): Clean up.
+message SubDiagnosticObservation {
+  // The observation as a Markdown text, given as a short description (just a few words).
+  string text = 1;
+
+  // Whether this observation should be flagged as notice-worthy. In particular, it's a warning
+  // flag for observations that will most likely hinder the user in their search.
+  bool is_attention_needed = 2;
+}
+
+enum DiagnosticTopic {
+  UNKNOWN_DIAGNOSTIC_TOPIC = 0;
+
+  // Diagnostic of the user's profile (skills, frustrations, age, motivation).
+  PROFILE_DIAGNOSTIC = 1;
+
+  // Diagnostic of the user's project (TODO(pascal): define it more).
+  PROJECT_DIAGNOSTIC = 2;
+
+  // Diagnostic on how the user is searching (CV, interviews, network).
+  JOB_SEARCH_DIAGNOSTIC = 3;
+
+  // Diagnostic of the micro-market itself.
+  MARKET_DIAGNOSTIC = 4;
+
+  // Whether the job is future proof.
+  JOB_OF_THE_FUTURE_DIAGNOSTIC = 5;
+}
+
+// Rules to decide which overall diagnostic the user will get. Also used as a text generator and an
+// observation generator for submetrics.
+// TODO(cyrille): Deprecate its use as a sentence generator for the text field in Diagnostic.
+message DiagnosticTemplate {
+  // Unique ID to reference this template.
+  string id = 11;
+
+  // Main sentence to be shown to the user.
+  string sentence_template = 1 [(string_format) = NATURAL_LANGUAGE, (string_format) = SCORING_PROJECT_TEMPLATE, (string_format) = SINGLE_LINER];
+
+  // DEPRECATED (since 2018-11): Diagnostic text is now generated directly from a single
+  // DiagnosticTemplate, and not several sentences.
+  // Rank of the sentence. The final diagnostic text will be composed of one
+  // sentence of each rank.
+  // TODO(pascal): Rename to rank.
+  uint32 order = 2 [deprecated = true];
+
+  // A list of filter IDs: do not show the diagnostic if one of these filters
+  // return false for the project.
+  repeated string filters = 3 [(string_format) = SCORING_MODEL_ID];
+
+  // DEPRECATED (since 2018-11): Diagnostic text is now generated directly from a single
+  // DiagnosticTemplate, and not several sentences.
+  // Whether this sentence is optional. Optional sentence don't block the
+  // publication of the overall diagnostic if they are missing. Non-optional
+  // sentences would require at least one sentence with the same rank to be
+  // present.
+  bool optional = 4;
+
+  // Which topic this diagnostic is relevant to. If this is for general diagnostic, leave empty.
+  DiagnosticTopic topic = 5;
+
+  // The score assigned with this diagnostic.
+  uint32 score = 6;
+
+  // The explanation text for this score and sentence. It uses markup language.
+  string text_template = 7 [(string_format) = NATURAL_LANGUAGE, (string_format) = SCORING_PROJECT_TEMPLATE, (string_format) = MARKUP_LANGUAGE];
+
+  // When used as an observation generator, say whether this needs attention from the user.
+  bool is_attention_needed = 8;
+
+  // Restrict to a specific Diagnostic category.
+  string category_id = 9;
+
+  // The text introducing the strategies proposed for this diagnostic.
+  string strategies_introduction = 10 [(string_format) = NATURAL_LANGUAGE, (string_format) = SCORING_PROJECT_TEMPLATE];
+}
+
+// A quick diagnostic for a partial project. It does not contain any semantics,
+// only formatted string that the user can display.
+message QuickDiagnostic {
+  // A set of comments with at most one comment per field.
+  repeated DiagnosticComment comments = 1;
+}
+
+message DiagnosticComment {
+  // The field that the comment is targeted for.
+  ProjectOrProfileField field = 1;
+
+  // Whether the comment should be shown before the field, or as a comment
+  // after it's been set.
+  bool is_before_question = 2;
+
+  // The actual comment.
+  BoldedString comment = 3;
+
+  // Whether the comment was shown to the user. This field is only updated by the client.
+  bool has_been_shown = 4;
+}
+
+// A formatted string that can be used to express a diagnostic with no
+// semantics other than the display in normal / bold font weight.
+message BoldedString {
+  // The whole string broken into normal and bolded parts. The first part is
+  // not bolded, so a string starting with bold text should have a list
+  // starting with an empty string.
+  repeated string string_parts = 1;
+}
+
+enum ProjectOrProfileField {
+  UNKNOWN_PROJECT_FIELD = 0;
+  CITY_FIELD = 1;
+  SALARY_FIELD = 2;
+  TARGET_JOB_FIELD = 3;
+  REQUESTED_DIPLOMA_FIELD = 4;
+  NETWORK_FIELD = 5;
+  WEEKLY_APPLICATION_FIELD = 6;
+  EMPLOYMENT_TYPE_FIELD = 7;
+}
+
+// The trace of a diagnostic request made by a client. This is mainly used for analytics.
+// TODO(cyrille): Add info from the result too (and drop the 'Request' in the name).
+message LoggedDiagnosticRequest {
+
+  // When the diagnostic was called for.
+  google.protobuf.Timestamp diagnosed_at = 1;
+
+  // The source that asked for a diagnostic for a user.
+  string source = 2;
+
+  // The code OGR of the job in the diagnostic.
+  string code_ogr = 3;
+
+  // The code ROME of the job group in the diagnostic.
+  string rome_id = 4;
+
+  // The ID of the city in the diagnostic.
+  string city_id = 5;
+
+  // The ID of the departement.
+  string departement_id = 6;
+
+  // The ID of the region.
+  string region_id = 7;
+}
+
+message DiagnosticMainChallenge {
+  // An identifier for the category. It should be human readable, but not in natural language,
+  // for instance "stuck-market".
+  string category_id = 1;
+
+  // The filters defining whether a project could belong to the category.
+  repeated string filters = 2 [(string_format) = SCORING_MODEL_ID];
+
+  // A scoring model to evaluate the relevance of this category. It is only evaluated if the
+  // filters above fail (i.e. the user is not in that category), and then:
+  // - A score of 0 means the category is not relevant (hide it from user)
+  // - A score of 1 means the category is neutral (not enough data, or just medium)
+  // - A score of 3 means the category is very relevant but the user nailed that particular point.
+  string relevance_scoring_model = 11 [(string_format) = SCORING_MODEL_ID];
+
+  // The order of priority for the category. It allows to choose a category when several apply for a
+  // given project. The category with smallest order is always preferred.
+  int32 order = 3;
+
+  // The text introducing the strategies proposed.
+  string strategies_introduction = 4 [(string_format) = NATURAL_LANGUAGE];
+
+  // Whether this category is shown only because the user is using the Alpha version of the advisor.
+  // Note that non-alpha user will not get this category and will skip to the next one that matches
+  // their project.
+  bool are_strategies_for_alpha_only = 5;
+
+  // How much this main challenge is relevant to a given context.
+  MainChallengeRelevance relevance = 7 [(field_usage) = ALGORITHM_RESULT];
+
+  // Title for a metric corresponding to the category to be displayed in the categories train.
+  // Very short title which should be coupled to metric_not_reached
+  // or metric_reached for more information.
+  string metric_title = 8 [(string_format) = NATURAL_LANGUAGE];
+
+  // Static explanation of the metric.
+  string metric_details = 9 [(string_format) = NATURAL_LANGUAGE];
+
+  // Short description of the category. Contrary to the metric_details, it is worded as a short
+  // self-diagnostic (1st person) and should highlight (using markup) the important part. e.g.
+  // Defining my **project cleary** (**Définir clairement** mon projet); Getting the **diploma** I
+  // need (Obtenir le **diplôme** qu'il me manque).
+  string description = 16 [(string_format) = NATURAL_LANGUAGE, (string_format) = LIST_OPTION, (string_format) = MARKUP_LANGUAGE];
+
+  // Short description of the category as an answer (As said by a third person). Worded as a short
+  // diagnostic (2nd person) and should highlight (using markup) the important part. e.g.
+  // Defining your **project cleary** (**Définir clairement** votre projet); Getting the **diploma** you
+  // need (Obtenir le **diplôme** qu'il vous manque).
+  string description_answer = 26 [(string_format) = NATURAL_LANGUAGE, (string_format) = LIST_OPTION, (string_format) = MARKUP_LANGUAGE];
+
+  // A short sentence describing user's challenge when this category is the user's main blocker.
+  string blocker_sentence = 14 [(string_format) = NATURAL_LANGUAGE];
+
+  // Whether this category should be highlighted in a list of categories.
+  bool is_highlighted = 12;
+
+  // Score for a project in this category. 0 is unknown, 1 is bad (the user will need a long time
+  // and effort before getting a job), 100 is good (the user is super close to getting a job).
+  int32 score = 13;
+
+  // Whether this category is the last one that should be relevant. It should be done when the
+  // category is so important that the user should only focus on it.
+  bool is_last_relevant = 15;
+
+  // A single emoji representing this main challenge. Should be replaced by an image by client
+  // that can.
+  string emoji = 17;
+
+  // Short text explaining the metric hasn't been reached yet.
+  // e.g. for the "Diploma" main challenge: "Level to check"
+  string metric_not_reached = 18 [(string_format) = NATURAL_LANGUAGE];
+
+  // Short text explaining the metric has been reached.
+  // e.g. for the "Diploma" main challenge: "Recommended level"
+  string metric_reached = 19 [(string_format) = NATURAL_LANGUAGE];
+
+  // Short text emphasing the priority for this main challenge.
+  // This is an advice sent to the user ("you" / "vous" / "tu" form) by Bob (using the "I" / "je" form)
+  // For instance: "viser un métier précis augmente très fortement vos chances de trouver un emploi"
+  string bob_explanation = 20 [(string_format) = NATURAL_LANGUAGE];
+
+  // Short text summarizing the achievement related to this priority (main challenge).
+  // Contrary to metric_reached, it's self contained.
+  // e.g. for the "Diploma" main challenge: "Recommended diploma level"
+  string achievement_text = 21 [(string_format) = NATURAL_LANGUAGE, (string_format) = LIST_OPTION, (string_format) = MARKUP_LANGUAGE];
+
+  // The highlighted part of the data that could be interesting for the user to tackle
+  // their main challenge. It can also be statistics on how other people tackling the same
+  // challenge are doing. It precedes a text that describes the data. It can be a number,
+  // a percentage. It has to be short. e.g. 3 (highlighted) ways of applying (text).
+  string interesting_highlight = 22 [(string_format) = NATURAL_LANGUAGE];
+
+  // The descriptive part of the data that could be interesting for the user to tackle their main challenge.
+  // It follows the highlighted number that contains the data.
+  // e.g. 3 (highlighted) ways of applying (text).
+  string interesting_text = 23 [(string_format) = NATURAL_LANGUAGE, (string_format) = PARTIAL_SENTENCE, (string_format) = SINGLE_LINER];
+
+  // The highlighted part of a sentence describing an example of the help we can provide to users
+  // with this main challenge. It precedes a text that describes the tools/help proposed.
+  // It can be a number, a percentage. It has to be short.
+  // e.g. 3 (highlighted) tools to create your portfolio (text).
+  string opportunity_highlight = 24 [(string_format) = NATURAL_LANGUAGE];
+
+  // The descriptive part part of a sentence describing an example of the help we can provide
+  // to users with this main challenge. It follows the highlighted number of tools or
+  // pieces of advice proposed. e.g. 3 (highlighted) tools to create your portfolio (text).
+  string opportunity_text = 25 [(string_format) = NATURAL_LANGUAGE, (string_format) = PARTIAL_SENTENCE, (string_format) = SINGLE_LINER];
+}
+
+enum MainChallengeRelevance {
+  UNKNOWN_RELEVANCE = 0;
+  // No need to bother the user with this challenge.
+  NOT_RELEVANT = 1;
+  // User might be interested to know this challenge is relevant,
+  // but we don't have much to say about it for them.
+  NEUTRAL_RELEVANCE = 2;
+  // This is relevant, and might be a blocking point.
+  NEEDS_ATTENTION = 3;
+  // This is relevant, and everything is good on that front.
+  RELEVANT_AND_GOOD = 4;
+}
+
+message DiagnosticMainChallenges {
+  repeated DiagnosticMainChallenge categories = 1;
+
+  // Whether the main challenges are sorted. If FALSE, then they are in random order.
+  bayes.OptionalBool is_sorted = 2;
+}
+
+message SelfDiagnostic {
+  // An identifier for the category the user identifies in. It comes from the list of categories
+  // currently used, provided by the server. It should be empty when the selfDiagnosticStatus is
+  // set to "OTHER".
+  string category_id = 1;
+
+  // A sentence that describes the category the user identifies in. It is submitted by the user.
+  string category_details = 2;
+
+  // DEPRECATED. What to expect as user self-identified category, either unknown,
+  // undefined, known or other.
+  // TODO(sil): Migrate old user to the new one.
+  SelfDiagnosticStatus self_diagnostic_status = 3 [deprecated = true];
+
+  // What to expect as user self-identified category, either unknown, undefined, known or other.
+  SelfDiagnosticStatus status = 4;
+
+  // Whether the main challenges was sorted when the user answered it.
+  bayes.OptionalBool answered_in_order = 5;
+}
+
+enum SelfDiagnosticStatus {
+  // User either has not answered the question or was not asked the question.
+  UNKNOWN_SELF_DIAGNOSTIC = 0;
+  // User doesn't know in which category they might be in when proposed for
+  // existing categories and an "other" category ("I don't know" answer).
+  UNDEFINED_SELF_DIAGNOSTIC = 1;
+  // User self identified in a known category.
+  KNOWN_SELF_DIAGNOSTIC = 2;
+  // User has proposed a custom category.
+  OTHER_SELF_DIAGNOSTIC = 3;
+}
+
+message DiagnosticResponse {
+  // Primary key composed by the self diagnostic and the main challenge (separated by ":").
+  string response_id = 1;
+
+  // Self diagnosed main challenge ID.
+  string self_main_challenge_id = 2;
+
+  // Computed main challenge ID.
+  string bob_main_challenge_id = 3;
+
+  // Response text if the user self diagnosed for "self_main_challenge_id" whereas the main
+  // challenge id computed is "bob_main_challenge_id".
+  // For instance: "J'observe une très forte concurrence pour ce métier : une belle candidature
+  // ne fera pas forcément la différence ! Regardons."
+  string text = 4 [(string_format) = NATURAL_LANGUAGE, (string_format) = MARKUP_LANGUAGE];
+}
