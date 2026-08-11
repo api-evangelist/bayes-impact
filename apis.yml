@@ -43,6 +43,11 @@ tags:
 - Protobuf
 apis: []
 common:
+- type: IssueTracker
+  url: https://github.com/bayesimpact/bob-emploi/issues
+- type: License
+  name: GPL-3.0
+  url: https://github.com/bayesimpact/bob-emploi/blob/main/LICENSE
 - type: Website
   url: https://www.bayesimpact.org
 - type: GitHubOrganization
