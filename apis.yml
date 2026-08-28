@@ -9,6 +9,19 @@ description: Bayes Impact is a nonprofit organization that builds open-source AI
   whose data structures are defined in Protocol Buffers. Other projects include the
   Bayes Platform agent framework for public services, the Encompass geographic-access
   analysis tool, and a range of civic data-science tooling.
+deliveryModel:
+  model: open-core
+  license: GPL-3.0
+  open_source: true
+  commercial: true
+  callable_host: false
+  label: Open core · an OSS project plus a commercial hosted product
+  confidence: high
+  source:
+  - license
+  - pricing
+  generated: '2026-08-28'
+  method: derived
 accessModel:
   pricing: unknown
   onboarding: unknown
