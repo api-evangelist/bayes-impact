@@ -1,0 +1,30 @@
+# Front Door AI Index — bayes-impact — 2026-09-17
+# AI vocabulary counted on the provider's root page. Generated; do not edit.
+# `score` is null unless ownership is `own` — see front_door_ai.py.
+front_door_ai:
+  slug: bayes-impact
+  lexicon_version: '1.0'
+  probed_at: '2026-09-17'
+  host: www.bayesimpact.org
+  final_host: www.bayesimpact.org
+  ownership: own
+  owner: bayes-impact
+  shares_host_with: null
+  inherited_from: null
+  verdict: scored
+  score: 29
+  host_score: 29
+  density: 24.11
+  words: 1203
+  tiers:
+    agentic: 9
+    core: 20
+    model: 0
+  ambiguous: 18
+  top_terms:
+    AI: 19
+    agent: 17
+    AI agent: 5
+    MCP: 4
+    LLMs: 1
+    intelligence: 1
