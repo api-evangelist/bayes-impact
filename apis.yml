@@ -52,7 +52,7 @@ tags:
 - Public Services
 - Civic Tech
 - Employment
-- Open-Source
+- Open Source
 - Protobuf
 tags_raw:
 - Company
@@ -64,6 +64,7 @@ tags_raw:
 - Employment
 - Open Source
 - Protobuf
+- Open-Source
 apis: []
 common:
 - type: IssueTracker
