@@ -43,7 +43,7 @@ x-tier: stub
 x-tier-reason: portfolio-lead
 specificationVersion: '0.23'
 created: '2026-07-17'
-modified: '2026-07-18'
+modified: '2026-10-06'
 tags:
 - Company
 - Non-Profit
@@ -67,6 +67,10 @@ tags_raw:
 - Open-Source
 apis: []
 common:
+- url: https://www.bayesimpact.org/blog
+  type: Blog
+- url: https://www.bayesimpact.org/blog/rss.xml
+  type: BlogRSS
 - type: IssueTracker
   url: https://github.com/bayesimpact/bob-emploi/issues
 - type: License
